@@ -22,39 +22,44 @@ server = net.createServer(function(sock) {
         var cmd = invo;
         switch (invo.what) {
             case 'add user': 
-            	reply.obj = dm.addUser (cmd.u, cmd.p);
+                reply.obj = dm.addUser (cmd.u, cmd.p);
+                var result = reply
                 break;
             case 'add Subject': 
-            	reply.obj = dm.addSubject (cmd.s);
+                reply.obj = dm.addSubject (cmd.s);
+                var result = reply
                 break;
             case 'get subject list': 
                 reply.obj = dm.getSubjectList();
-                console.log(reply.obj);
+                var result = reply
                 break;
             case 'get user list': 
                 reply.obj = dm.getUserList (cmd.sbj);
-                console.log(reply.obj);
+                var result = reply
                 break;
             case 'login': 
-            	reply.obj = dm.login (cmd.u, cmd.p);
+                reply.obj = dm.login (cmd.u, cmd.p);
+                var result = reply
                 break;
             case 'message': 
-            	reply.obj = dm.addPrivateMessage (cmd.msg);
+                reply.obj = dm.addPrivateMessage (cmd.msg);
+                var result = reply
                 break;
             case 'get private message list': 
-            	reply.obj = dm.getPrivateMessageList (cmd.u1, cmd.u2);
+                reply.obj = dm.getPrivateMessageList (cmd.u1, cmd.u2);
+                var result = reply
                 break;
             case 'add public message': 
-            	reply.obj = dm.addPublicMessage (cmd.msg);
+                reply.obj = dm.addPublicMessage (cmd.msg);
+                var result = reply
             	break;
             case 'get public message list': 
-            	reply.obj = dm.getPublicMessageList (cmd.sbj);
+                reply.obj = dm.getPublicMessageList (cmd.sbj);
+                var result = reply
             	break;
-            // TODO: complete all forum functions
         }
-        sock.write (JSON.stringify(reply));
+        sock.write (JSON.stringify(result));
     });
-
 
     // Add a 'close' event handler to this instance of socket
     sock.on('close', function(data) {

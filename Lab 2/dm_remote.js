@@ -75,7 +75,7 @@ client.on ('data', function (data) {
 
 // Add a 'close' event handler for the client socket
 client.on('close', function() {
-    console.log('Connection closed');
+	console.log('Connection closed');
 });
 
 
