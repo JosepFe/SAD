@@ -12,53 +12,61 @@ server = net.createServer(function(sock) {
     
     // Add a 'data' event handler to this instance of socket
     sock.on('data', function(data) {
-        
-        console.log('request comes in...' + data);
-        var str = data.toString();
-        var invo = JSON.parse (str);
-        console.log('request is:' + invo.what + ':' + str);
 
-        var reply = {what:invo.what, invoId:invo.invoId};
-        var cmd = invo;
-        switch (invo.what) {
-            case 'add user': 
-                reply.obj = dm.addUser (cmd.u, cmd.p);
-                var result = reply
-                break;
-            case 'add Subject': 
-                reply.obj = dm.addSubject (cmd.s);
-                var result = reply
-                break;
-            case 'get subject list': 
-                reply.obj = dm.getSubjectList();
-                var result = reply
-                break;
-            case 'get user list': 
-                reply.obj = dm.getUserList (cmd.sbj);
-                var result = reply
-                break;
-            case 'login': 
-                reply.obj = dm.login (cmd.u, cmd.p);
-                var result = reply
-                break;
-            case 'message': 
-                reply.obj = dm.addPrivateMessage (cmd.msg);
-                var result = reply
-                break;
-            case 'get private message list': 
-                reply.obj = dm.getPrivateMessageList (cmd.u1, cmd.u2);
-                var result = reply
-                break;
-            case 'add public message': 
-                reply.obj = dm.addPublicMessage (cmd.msg);
-                var result = reply
-            	break;
-            case 'get public message list': 
-                reply.obj = dm.getPublicMessageList (cmd.sbj);
-                var result = reply
-            	break;
-        }
-        sock.write (JSON.stringify(result));
+        var str = data.toString();
+        var arr = str.split('$$');
+
+        arr.forEach(function(element){
+            if(element.toString() != ""){
+
+                console.log("request comes in..." + element.toString());
+                var invo = JSON.parse (element);
+
+                var reply = {what:invo.what, invoId:invo.invoId};
+                var cmd = invo;
+
+                switch (invo.what) {
+
+                    case 'add user': 
+                        reply.obj = dm.addUser (cmd.u, cmd.p);
+                        break;
+
+                    case 'add subject': 
+                        reply.obj = dm.addSubject (cmd.s);
+                        break;
+
+                    case 'get subject list': 
+                        reply.obj = dm.getSubjectList();
+                        break;
+
+                    case 'get user list': 
+                        reply.obj = dm.getUserList (cmd.sbj);
+                        break;
+
+                    case 'login': 
+                        reply.obj = dm.login (cmd.u, cmd.p);
+                        break;
+
+                    case 'message': 
+                        reply.obj = dm.addPrivateMessage (cmd.msg);
+                        break;
+
+                    case 'get private message list': 
+                        reply.obj = dm.getPrivateMessageList (cmd.u1, cmd.u2);
+                        break;
+
+                    case 'add public message': 
+                        reply.obj = dm.addPublicMessage (cmd.msg);
+                        break;
+
+                    case 'get public message list': 
+                        reply.obj = dm.getPublicMessageList (cmd.sbj);
+                        break;
+                }
+                console.log("reply is: " + JSON.stringify(reply));
+                sock.write (JSON.stringify(reply) + "$$");
+            }
+        });
     });
 
     // Add a 'close' event handler to this instance of socket
@@ -66,10 +74,18 @@ server = net.createServer(function(sock) {
         console.log('Connection closed');
     });
     
+    // Error handler
+    sock.on("error", function(err){ 
+        console.log("server socket error: ");
+        console.log(err.stack);
+    });
+    
 });
     
 server.listen(PORT, HOST, function () {
     console.log('Server listening on ' + HOST +':'+ PORT);
 });
+
+
 
 

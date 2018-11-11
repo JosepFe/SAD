@@ -33,8 +33,6 @@ app.get('/:page', function(req, res){
 	get_page (req, res);
 });
 
-
-
 io.on('connection', function(sock) {
 	console.log("Event: client connected");
 	sock.on('disconnect', function(){
@@ -45,16 +43,17 @@ io.on('connection', function(sock) {
   	// connected client
   	// TODO: We better optimize message delivery using rooms.
   	sock.on('message', function(msgStr){
-  		console.log("Event: message: " + msgStr);
   		var msg = JSON.parse (msgStr);
 		msg.ts = new Date(); // timestamp
 		if (msg.isPrivate) {
 			dm.addPrivateMessage (msg, function () {
-				io.emit('message', JSON.stringify(msg));
+				//io.emit('message', JSON.stringify(msg));
+				sock.emit('message', JSON.stringify(msg));
 			});
 		} else {
 			dm.addPublicMessage (msg, function () {
-				io.emit('message', JSON.stringify(msg));
+				//io.emit('message', JSON.stringify(msg));
+				sock.emit('message', JSON.stringify(msg));
 			});
 		}
 	});
@@ -66,8 +65,9 @@ io.on('connection', function(sock) {
     		if (id == -1) {
     			sock.emit ('new subject', 'err', 'El tema ya existe', sbj);
     		} else {
-    			sock.emit ('new subject', 'ack', id, sbj);
-    			io.emit ('new subject', 'add', id, sbj);
+				sock.emit ('new subject', 'ack', id, sbj);
+				// io.emit ('new subject', 'add', id, sbj);
+				sock.emit ('new subject', 'add', id, sbj);
     		}      
     	});
     });
