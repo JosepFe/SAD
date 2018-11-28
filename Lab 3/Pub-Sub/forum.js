@@ -10,6 +10,10 @@ var HOST = process.argv[3];
 var PORT = process.argv[4];
 var PORTSUB = process.argv[5];
 
+var toid;
+var fromId;
+var isPrivat;
+
 console.log("Puerto connect: " + PORT);
 if (PORTSUB == undefined) {
   console.log("Falta un parametro para sincronizar servidores");
@@ -49,63 +53,57 @@ app.get("/:page", function(req, res) {
 });
 
 io.on("connection", function(sock) {
+  sub.on("message", function(channel, data) {
+    var str = data.toString();
+    var arr = str.split("$$");
 
-	sub.on('message', function (channel, data) {
-		var str = data.toString();
-		var arr = str.split('$$');
-	
-		arr.forEach(function (element) {
-			if (element.toString() != "") {
-	
-				console.log("request comes in..." + element.toString());
-				var invo = JSON.parse(element);
-				var reply = { what: invo.what, invoId: invo.invoId };
-				//var pubsub = { what: invo.what };
-				switch (invo.what) {
-					case 'add user':
-						sock.emit('new user', 'ack', invo.obj);
-						break;
-	
-					case 'add subject':
-						sock.emit('new subject', 'ack', invo.obj);
-						break;
-	
-					case 'get subject list':
-						sock.emit('subject list', invo.obj);
-						break;
-	
-					case 'get user list':
-						sock.emit('user list', invo.obj);
-						break;
-	
-					case 'login':
-						sock.emit('login', 'ack', invo.obj);
-						break;
-	
-					case 'message':
-						sock.emit('message', JSON.stringify(invo.obj));
-						break;
-	
-					case 'get private message list':
-						sock.emit('message list', from, to, isPriv, list);
-						break;
-	
-					case 'add public message':
-						sock.emit('message', JSON.stringify(element.msg));
-						break;
-	
-					case 'get public message list':
-						sock.emit('message list', from, to, isPriv, list);
-						break;
-	
-					default:
-						console.log("mensaje vacio");
-				}
-			}
-			
-		});
-	});
+    arr.forEach(function(element) {
+      if (element.toString() != "") {
+        console.log("request comes in..." + element.toString());
+        var invo = JSON.parse(element);
+        switch (invo.what) {
+          case "add user":
+            sock.emit("new user", "ack", invo.obj);
+            break;
 
+          case "add subject":
+            sock.emit("new subject", "ack", invo.obj);
+            break;
+
+          case "get subject list":
+            sock.emit("subject list", invo.obj);
+            break;
+
+          case "get user list":
+            sock.emit("user list", invo.obj);
+            break;
+
+          case "login":
+            sock.emit("login", "ack", invo.obj);
+            break;
+
+          case "message":
+            sock.emit("message", JSON.stringify(invo.obj));
+            break;
+
+          case "get private message list":
+            sock.emit("message list", fromId, toid, isPrivat, invo.obj);
+            break;
+
+          case "add public message":
+            sock.emit("message", id, invo.obj);
+            break;
+
+          case "get public message list":
+            sock.emit("message list", fromId, toid, isPrivat, invo.obj);
+            break;
+
+          default:
+            console.log("mensaje vacio");
+        }
+      }
+    });
+  });
 
   console.log("Event: client connected");
   sock.on("disconnect", function() {
@@ -168,14 +166,17 @@ io.on("connection", function(sock) {
 
   // Client ask for current subject list
   sock.on("get subject list", function() {
+    console.log("Event: get subject list");
     dm.getSubjectList(function(list) {
-      console.log("Event: get subject list");
       // sock.emit('subject list', list);
     });
   });
 
   // Client ask for message list
   sock.on("get message list", function(from, to, isPriv) {
+    id = to;
+    fromId = from;
+    isPrivat = isPriv;
     console.log(
       "Event: get message list: " + from + ":" + to + "(" + isPriv + ")"
     );
@@ -184,6 +185,7 @@ io.on("connection", function(sock) {
         // sock.emit('message list', from, to, isPriv, list);
       });
     } else {
+      console.log("hello");
       dm.getPublicMessageList(to, function(list) {
         // sock.emit('message list', from, to, isPriv, list);
       });

@@ -37,7 +37,6 @@ rp.on('message', function (data) {
             console.log("request comes in..." + element.toString());
             var invo = JSON.parse(element);
             var reply = { what: invo.what, invoId: invo.invoId };
-            //var pubsub = { what: invo.what };
             switch (invo.what) {
                 case 'add user':
                     reply.obj = dm.addUser(invo.u, invo.p);
@@ -79,7 +78,7 @@ rp.on('message', function (data) {
                     console.log("mensaje vacio");
             }
             console.log("reply is: " + JSON.stringify(reply));
-            //rp.send(JSON.stringify(reply) + "$$");
+            rp.send(JSON.stringify(reply) + "$$");
             console.log("estoy aqui!");
             pub.send(['WS', JSON.stringify(reply) + "$$"]);
             pub.send("esto lo queremos ver");
