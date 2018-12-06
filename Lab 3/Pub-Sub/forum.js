@@ -6,15 +6,12 @@ var dm = require("./dm_remote.js");
 var zmq = require("zmq");
 var sub = zmq.socket("sub");
 
+var PORT = process.argv[2];
 var HOST = process.argv[3];
-var PORT = process.argv[4];
+var PORTDMSERVER = process.argv[4];
 var PORTSUB = process.argv[5];
 
-var toid;
-var fromId;
-var isPrivat;
-
-console.log("Puerto connect: " + PORT);
+console.log("Puerto connect: " + PORTSUB);
 if (PORTSUB == undefined) {
   console.log("Falta un parametro para sincronizar servidores");
 } else {
@@ -26,7 +23,7 @@ sub.subscribe("WS");
 var viewsdir = __dirname + "/views";
 app.set("views", viewsdir);
 
-dm.Start(HOST, PORT);
+dm.Start(HOST, PORTDMSERVER);
 
 // called on connection
 function get_page(req, res) {
@@ -53,6 +50,10 @@ app.get("/:page", function(req, res) {
 });
 
 io.on("connection", function(sock) {
+  var toid;
+  var fromId;
+  var isPrivat;
+
   sub.on("message", function(channel, data) {
     var str = data.toString();
     var arr = str.split("$$");
@@ -63,11 +64,11 @@ io.on("connection", function(sock) {
         var invo = JSON.parse(element);
         switch (invo.what) {
           case "add user":
-            sock.emit("new user", "ack", invo.obj);
+            //sock.emit("new user", "ack", invo.obj);
             break;
 
           case "add subject":
-            sock.emit("new subject", "ack", invo.obj);
+            //sock.emit("new subject", "ack", invo.obj);
             break;
 
           case "get subject list":
@@ -83,15 +84,15 @@ io.on("connection", function(sock) {
             break;
 
           case "message":
-            sock.emit("message", JSON.stringify(invo.obj));
+            // sock.emit("message", JSON.stringify(invo.obj));
             break;
 
           case "get private message list":
-            sock.emit("message list", fromId, toid, isPrivat, invo.obj);
+            // sock.emit("message list", fromId, toid, isPrivat, invo.obj);
             break;
 
           case "add public message":
-            sock.emit("message", id, invo.obj);
+            sock.emit("message", toid, invo.obj);
             break;
 
           case "get public message list":
@@ -148,10 +149,10 @@ io.on("connection", function(sock) {
     dm.addUser(usr, pas, function(exists) {
       console.log("Event: new user: " + usr + "(" + pas + ")");
       if (exists) {
-        sock.emit("new user", "err", usr, "El usuario ya existe");
+        //sock.emit("new user", "err", usr, "El usuario ya existe");
       } else {
         // sock.emit('new user', 'ack', usr);
-        io.emit("new user", "add", usr);
+        //io.emit("new user", "add", usr);
       }
     });
   });
@@ -174,9 +175,10 @@ io.on("connection", function(sock) {
 
   // Client ask for message list
   sock.on("get message list", function(from, to, isPriv) {
-    id = to;
+    toid = to;
     fromId = from;
     isPrivat = isPriv;
+
     console.log(
       "Event: get message list: " + from + ":" + to + "(" + isPriv + ")"
     );
@@ -185,9 +187,8 @@ io.on("connection", function(sock) {
         // sock.emit('message list', from, to, isPriv, list);
       });
     } else {
-      console.log("hello");
       dm.getPublicMessageList(to, function(list) {
-        // sock.emit('message list', from, to, isPriv, list);
+        //sock.emit("message list", from, to, isPriv, list);
       });
     }
   });
@@ -209,4 +210,4 @@ io.on("connection", function(sock) {
 });
 
 // Listen for connections !!
-http.listen(process.argv[2], on_startup);
+http.listen(PORT, on_startup);

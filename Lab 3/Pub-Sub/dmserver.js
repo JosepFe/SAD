@@ -81,7 +81,6 @@ rp.on('message', function (data) {
             rp.send(JSON.stringify(reply) + "$$");
             console.log("estoy aqui!");
             pub.send(['WS', JSON.stringify(reply) + "$$"]);
-            pub.send("esto lo queremos ver");
         }
     });
 });
