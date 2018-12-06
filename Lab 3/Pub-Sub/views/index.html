@@ -286,7 +286,8 @@ var messageArea = null;  // current message list we display
 //------------------------------------------------------------------------
 
 // On message (private or public) from server, append it to message area.
-socket.on('messages', function(msgStr){
+socket.on('message', function(msgStr){
+    console.log('!!' + msgStr);
     var msg = JSON.parse (msgStr);
     msg.ts = new Date (msg.ts);
     if (messageArea.isPrivate == msg.isPrivate && 
@@ -324,7 +325,8 @@ socket.on ('new user', function (what, strUser, data) {
             dlg_new_user.dialog("close");
             break;
         case 'add':
-            dom_push_user (strUser); // data is id. for user names, its equal
+            dom_push_user (strUser);
+            dlg_new_user.dialog("close"); // data is id. for user names, its equal
             break;  
     }
     // enable dialog as it was previously disabled.
@@ -544,7 +546,8 @@ function do_sendMessage () {
     if (msgStr != '') {
         var msg = new Message (msgStr, userName, messageArea.toId, 
                 messageArea.isPrivate, '');
-        socket.emit('message', JSON.stringify(msg));
+        console.log(msg);
+        socket.emit('messages', JSON.stringify(msg));
     }
     $('#msg').val('');
 }

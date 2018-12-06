@@ -67,8 +67,8 @@ rp.on('message', function (data) {
                     break;
 
                 case 'add public message':
+                console.log('haaaaaaaaaaaaaaaaaa   '+ invo.msg)
                     reply.obj = dm.addPublicMessage(invo.msg);
-
                     break;
 
                 case 'get public message list':

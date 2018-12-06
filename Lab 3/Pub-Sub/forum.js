@@ -53,6 +53,8 @@ io.on("connection", function(sock) {
   var toid;
   var fromId;
   var isPrivat;
+  var message;
+  var usuario;
 
   sub.on("message", function(channel, data) {
     var str = data.toString();
@@ -64,7 +66,12 @@ io.on("connection", function(sock) {
         var invo = JSON.parse(element);
         switch (invo.what) {
           case "add user":
-            //sock.emit("new user", "ack", invo.obj);
+            //console.log("Event: new user: " + usuario + "(" + pas + ")");
+            if (invo.obj) {
+              sock.emit("new user", "err", usuario, "El usuario ya existe");
+            } else {
+              sock.emit("new user", "add", usuario);
+            }
             break;
 
           case "add subject":
@@ -92,7 +99,7 @@ io.on("connection", function(sock) {
             break;
 
           case "add public message":
-            sock.emit("message", toid, invo.obj);
+            sock.emit("message", message);
             break;
 
           case "get public message list":
@@ -115,8 +122,10 @@ io.on("connection", function(sock) {
   // connected client
   // TODO: We better optimize message delivery using rooms.
   sock.on("messages", function(msgStr) {
+    message = msgStr;
     var msg = JSON.parse(msgStr);
     msg.ts = new Date(); // timestamp
+
     if (msg.isPrivate) {
       dm.addPrivateMessage(msg, function() {
         //io.emit('message', JSON.stringify(msg));
@@ -146,6 +155,7 @@ io.on("connection", function(sock) {
 
   // New subject added to storage, and broadcasted
   sock.on("new user", function(usr, pas) {
+    usuario = usr;
     dm.addUser(usr, pas, function(exists) {
       console.log("Event: new user: " + usr + "(" + pas + ")");
       if (exists) {
