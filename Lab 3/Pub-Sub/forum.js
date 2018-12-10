@@ -55,7 +55,7 @@ io.on("connection", function(sock) {
   var isPrivat;
   var message;
   var usuario;
-
+  var subject;
   sub.on("message", function(channel, data) {
     var str = data.toString();
     var arr = str.split("$$");
@@ -66,7 +66,6 @@ io.on("connection", function(sock) {
         var invo = JSON.parse(element);
         switch (invo.what) {
           case "add user":
-            //console.log("Event: new user: " + usuario + "(" + pas + ")");
             if (invo.obj) {
               sock.emit("new user", "err", usuario, "El usuario ya existe");
             } else {
@@ -75,7 +74,7 @@ io.on("connection", function(sock) {
             break;
 
           case "add subject":
-            //sock.emit("new subject", "ack", invo.obj);
+            sock.emit("new subject", "add", invo.obj ,subject);
             break;
 
           case "get subject list":
@@ -87,15 +86,21 @@ io.on("connection", function(sock) {
             break;
 
           case "login":
-            sock.emit("login", "ack", invo.obj);
+          if (!invo.obj) {
+            console.log("Wrong user credentials: " + usuario);
+            sock.emit("login", "err", "Credenciales incorrectas");
+          } else {
+            console.log("User logs in: " + usuario);
+            sock.emit('login', 'ack', usuario);
+          }
             break;
 
           case "message":
-            // sock.emit("message", JSON.stringify(invo.obj));
+            sock.emit("message", message);
             break;
 
           case "get private message list":
-            // sock.emit("message list", fromId, toid, isPrivat, invo.obj);
+            sock.emit("message list", fromId, toid, isPrivat, invo.obj);
             break;
 
           case "add public message":
@@ -125,7 +130,6 @@ io.on("connection", function(sock) {
     message = msgStr;
     var msg = JSON.parse(msgStr);
     msg.ts = new Date(); // timestamp
-
     if (msg.isPrivate) {
       dm.addPrivateMessage(msg, function() {
         //io.emit('message', JSON.stringify(msg));
@@ -141,6 +145,7 @@ io.on("connection", function(sock) {
 
   // New subject added to storage, and broadcasted
   sock.on("new subject", function(sbj) {
+  subject = sbj;
     dm.addSubject(sbj, function(id) {
       console.log("Event: new subject: " + sbj + "-->" + id);
       if (id == -1) {
@@ -206,15 +211,16 @@ io.on("connection", function(sock) {
   // Client authenticates
   // TODO: session management and possible single sign on
   sock.on("login", function(u, p) {
+    usuario = u;
     console.log("Event: user logs in");
     dm.login(u, p, function(ok) {
-      if (!ok) {
-        console.log("Wrong user credentials: " + u + "(" + p + ")");
-        sock.emit("login", "err", "Credenciales incorrectas");
-      } else {
-        console.log("User logs in: " + u + "(" + p + ")");
-        // sock.emit('login', 'ack', u);
-      }
+      // if (!ok) {
+      //   console.log("Wrong user credentials: " + u + "(" + p + ")");
+      //   //sock.emit("login", "err", "Credenciales incorrectas");
+      // } else {
+      //   console.log("User logs in: " + u + "(" + p + ")");
+      //   // sock.emit('login', 'ack', u);
+      // }
     });
   });
 });

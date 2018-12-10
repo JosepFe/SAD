@@ -44,6 +44,8 @@ rp.on('message', function (data) {
 
                 case 'add subject':
                     reply.obj = dm.addSubject(invo.s);
+                    console.log('sbj:' + reply.sbj);
+                    console.log('obj' + reply.obj);
                     break;
 
                 case 'get subject list':
@@ -59,6 +61,7 @@ rp.on('message', function (data) {
                     break;
 
                 case 'message':
+
                     reply.obj = dm.addPrivateMessage(invo.msg);
                     break;
 
@@ -67,7 +70,6 @@ rp.on('message', function (data) {
                     break;
 
                 case 'add public message':
-                console.log('haaaaaaaaaaaaaaaaaa   '+ invo.msg)
                     reply.obj = dm.addPublicMessage(invo.msg);
                     break;
 
