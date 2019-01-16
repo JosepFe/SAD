@@ -1,20 +1,10 @@
 Instructions to deploy the forum
-
- 1 - node dmserver.js HOST PORT
  
  1 - node dmserver.js HOST PORT PUBPORT LIST[SUBHOST:SUBPORT]
- 
- (lista separada por ",")
- 
- 
- dmserver.js 127.0.0.1 8082 9007 127.0.0.1:9001,127.0.0.1:9000
- 
- node forum.js 9002 127.0.0.1:8080 127.0.0.1:9000
 
- 2 - node forum.js PORT HOST(deployed dmserver) PORT(deployed dmserver)
+ 2 - node forum.js PORT HOST(deployed dmserver):PORT(deployed dmserver) HOST(subscriber port):PORT(subscriber port)
 
  
-
  Example:
 
   1- node dmserver.js 127.0.0.1 8080 9000 127.0.0.1:9001,127.0.0.1:9002
