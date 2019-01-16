@@ -324,8 +324,7 @@ socket.on ('new user', function (what, strUser, data) {
             dlg_new_user.dialog("close");
             break;
         case 'add':
-            dom_push_user (strUser);
-            dlg_new_user.dialog("close"); // data is id. for user names, its equal
+            dom_push_user (strUser); // data is id. for user names, its equal
             break;  
     }
     // enable dialog as it was previously disabled.
@@ -545,8 +544,7 @@ function do_sendMessage () {
     if (msgStr != '') {
         var msg = new Message (msgStr, userName, messageArea.toId, 
                 messageArea.isPrivate, '');
-        console.log(msg);
-        socket.emit('messages', JSON.stringify(msg));
+        socket.emit('message', JSON.stringify(msg));
     }
     $('#msg').val('');
 }

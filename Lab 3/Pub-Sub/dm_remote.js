@@ -107,13 +107,13 @@ exports.addUser = function (u,p, cb) {
 	var invo = new Invo('add user', cb);
 	invo.u = u;
 	invo.p = p;
-	rq.send(JSON.stringify(invo));
+	rq.send(JSON.stringify(invo) + "$$");
 }
 
 exports.addSubject = function (s, cb) {
 	var invo = new Invo('add subject', cb);
 	invo.s = s;
-	rq.send(JSON.stringify(invo));
+	rq.send(JSON.stringify(invo) + "$$");
 }
 
 exports.getSubjectList = function (cb) {
@@ -128,31 +128,31 @@ exports.login = function (u, p, cb) {
 	var invo = new Invo('login', cb);
 	invo.u = u;
 	invo.p = p;
-	rq.send(JSON.stringify(invo));
+	rq.send(JSON.stringify(invo) + "$$");
 }
 
 exports.addPrivateMessage = function (msg, cb) {
 	var invo = new Invo('add private message', cb);
 	invo.msg = msg;
-	rq.send(JSON.stringify(invo));
+	rq.send(JSON.stringify(invo) + "$$");
 }
 
 exports.getPrivateMessageList = function (u1, u2, cb) {
 	invo = new Invo ('get private message list', cb);
 	invo.u1 = u1;
 	invo.u2 = u2;
-	rq.send (JSON.stringify(invo));
+	rq.send (JSON.stringify(invo) + "$$");
 }
 
 exports.addPublicMessage = function (msg, cb) {
 	var invo = new Invo('add public message', cb);
 	invo.msg = msg;
-	rq.send(JSON.stringify(invo));
+	rq.send(JSON.stringify(invo) + "$$");
 }
 
 exports.getPublicMessageList = function  (sbj, cb) {
 	var invo = new Invo ('get public message list', cb);	
 	invo.sbj = sbj;
-	rq.send (JSON.stringify(invo));
+	rq.send (JSON.stringify(invo) + "$$");
 }
 
