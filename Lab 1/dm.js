@@ -16,21 +16,29 @@ var users = { Foreador: '1234',
 			};
 var publicMessages = {id0: [new Post ('primer mensaje', 'Foreador', new Date()),
 							new Post ('SEGUNDO mensaje', 'Foreador', new Date())],
-					  id1: [new Post ('primer mensaje literario', 'mudito', new Date())],
 				      id2: [new Post ('primer mensaje futbolero', 'josocxe', new Date())]
 			         };
 
+// first field name is nick1_nick2, where nick1 is less than nick2 in alpahabetic order
+var privateMessages = 
+	{Foreador_josocxe: [new Post ('Hola mudito', 'Foreador', new Date()),
+						new Post ('Hola amigo, te gusta el foro?', 'josocxe', new Date()),
+						new Post ('Ta chachi', 'Foreador', new Date())],
+	 mudito_troll: [new Post ('Hola', 'troll', 'mudito', new Date()),
+	 				new Post ('Oye, porqué no contestas?', 'troll', new Date())],
+	 josocxe_mudito: [new Post ('Amunt València !!', 'josocxe', new Date())]
+	 };
 
 
-// true on success
+// true if already exists
 exports.addUser = function (u,p) {
 	var lower = u.toLowerCase();
 	var exists = false;
 	for (var i in users) {
 		if (i.toLowerCase() == lower) {exists = true; break;}
 	}
-	if (!exists) users.push({u:p});
-	return !exists;
+	if (!exists) users[u] = p;
+	return exists;
 }
 
 // Adds a new subject to subject list. Returns -1 if already exists, id on success
@@ -45,7 +53,10 @@ exports.addSubject = function (s) {
 	return idlen;
 }
 
-exports.getSubjectList = function () {return JSON.stringify (subjects);}
+exports.getSubjectList = function () {
+	return JSON.stringify (subjects);
+}
+
 
 exports.getUserList = function () {
 	var userlist = [];
@@ -62,9 +73,22 @@ exports.login = function (u, p) {
 	return false; // user not found
 }
 
-// TODO: PRIVATE MESSAGES
-//exports.addPrivateMessage = function (msg){}
-//exports.getPrivateMessageList = function (u1, u2) {}
+exports.addPrivateMessage = function (msg){
+	// lower user us always first
+	var u1=msg.from;
+	var u2=msg.to;
+	var k = (u1.toLowerCase().localeCompare(u2.toLowerCase())<0) ? u1+'_'+u2:u2+'_'+u1;
+	var ml = privateMessages [k];
+	if (!ml) privateMessages [k] = [];
+	privateMessages[k].push (msg);
+}
+
+exports.getPrivateMessageList = function (u1, u2) {
+	// lower user us always first
+	var k = (u1.toLowerCase().localeCompare(u2.toLowerCase())<0) ? u1+'_'+u2:u2+'_'+u1;
+	console.log ("private message list key:" + k);
+	return JSON.stringify (privateMessages[k]);
+}
 
 function getSubject (sbj) {
 	for (var i in subjects) {
@@ -76,18 +100,12 @@ function getSubject (sbj) {
 // adds a public message to storage
 exports.addPublicMessage = function (msg)
 {
-	var post = new Post (msg.msg, msg.from, msg.ts);
 	var ml = publicMessages [msg.to];
 	if (!ml) publicMessages [msg.to] = [];
 	publicMessages [msg.to].push(msg);
 }
 
 exports.getPublicMessageList = function (sbj) {
-	var idx=getSubject (sbj);
-	var ml=[];
-	if (idx != -1) {
-		ml = publicMessages [idx];
-	}
 	return JSON.stringify (publicMessages[sbj]);
 }
 

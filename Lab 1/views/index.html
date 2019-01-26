@@ -18,7 +18,7 @@
 /* Header and footer styles */
 
 .cls-title {
-    font-size: 36px;    
+    font-size: 26px;    
     font-weight: bold;
 }
 
@@ -46,10 +46,10 @@ div#header {
 
 /* Header content */
 
-div#header-left {
+div#header-right {
     display:inline-block;
     left:10px; 
-    width:290px; 
+    width:310px; 
     float:right;
 }
 
@@ -98,7 +98,7 @@ form#frm-message textarea {
 button.cls-btn { 
     cursor: pointer;
     border-radius: 5px;
-    font-size:11px;
+    font-size:10px;
     color: #222;
     font-weight: normal;
     border: 2px solid #000;
@@ -106,18 +106,12 @@ button.cls-btn {
     background: #E5FA00;
     padding: 0; 
     width: 60px; 
-    height:26px; 
+    height:18px; 
     margin:2px 0px 0px 0px;
     display:inline;
 }
 
-button#btn-message {  
-    height:50px;
-    padding: 10px; 
-    margin:0;
-} 
-
-button#btn-login {  
+button#btn-message, button#btn-login {  
     height:50px;
     padding: 10px; 
     margin:0;
@@ -157,7 +151,7 @@ div#center {
 /* Column content */
 
 .cls-column-title {
-    font-size: 26px;    
+    font-size: 18px;    
     font-weight: bold;
 }
 
@@ -262,8 +256,8 @@ function Message (msg, from, to, isPrivate, ts) {
 
 
 // Message area holds both private messages and subject messages
-function MessageArea (id, str, isPrivate) {
-    this.id = id; this.str = str; this.isPrivate=isPrivate;
+function MessageArea (toId, toStr, isPrivate) {
+    this.toId = toId; this.toStr = toStr; this.isPrivate=isPrivate;
 }
 
 
@@ -281,7 +275,7 @@ var dlg_new_subject;
 var dlg_new_user;
 
 // Forum state
-var userName = null;     // current user name when login succeeds
+var userName = '';     // current user name when login succeeds, '' means none
 var messageArea = null;  // current message list we display
 
 
@@ -295,7 +289,8 @@ var messageArea = null;  // current message list we display
 socket.on('message', function(msgStr){
     var msg = JSON.parse (msgStr);
     msg.ts = new Date (msg.ts);
-    if (messageArea.isPrivate == msg.isPrivate && messageArea.id == msg.to) {
+    if (messageArea.isPrivate == msg.isPrivate && 
+        (messageArea.toId == msg.to || messageArea.toId == msg.from)) {
         dom_push_message (msg);
     } else {
         console.log ("Notice: message lost due to asynchrony: " + msgStr);
@@ -303,23 +298,37 @@ socket.on('message', function(msgStr){
 });
 
 // On new subject event: error while creating, ack, or add subject from the server
-socket.on ('new subject', function (what, data, sbj) {
+socket.on ('new subject', function (what, data, strSbj) {
     switch (what) {
         case 'err':
-            ui_setPopupError (data);
-            console.log("Error: " + data); // data is error message
+            ui_setPopupError (data); // data is error message
             break;
-        case 'ack':
+        case 'ack': // ok, so we can close dialog
             dlg_new_subject.dialog("close");
             break;
         case 'add':
-            console.log("adding id:" + data + ",sbj:" + sbj);
-            dom_push_subject (data, sbj); // data is id
+            dom_push_subject (data, strSbj); // data is id
             break;  
     }
-    ui_setEnabledPopup (true);
     // enable dialog as it was previously disabled.
+    ui_setEnabledPopup (true);
+});
 
+// On new subject event: error while creating, ack, or add subject from the server
+socket.on ('new user', function (what, strUser, data) {
+    switch (what) {
+        case 'err':
+            ui_setPopupError (data); // data is error message
+            break;
+        case 'ack': // ok, so we can close dialog
+            dlg_new_user.dialog("close");
+            break;
+        case 'add':
+            dom_push_user (strUser); // data is id. for user names, its equal
+            break;  
+    }
+    // enable dialog as it was previously disabled.
+    ui_setEnabledPopup (true);
 });
 
 // When receiving the subject list, display it and ask for first subject message list
@@ -328,11 +337,10 @@ socket.on ('subject list', function (data) {
     for (var i in slist) {
         dom_push_subject (i, slist[i]);
     }
-    for (var i in slist) {
-        messageArea = new MessageArea (i, slist[i], false); // public message area
-        do_askMessageList ();
-        break; // just first
-    }
+
+    // Ask messages for first subject
+    var firstId = Object.keys(slist)[0];
+    do_askMessageList (firstId, slist[firstId], false);
 });
 
 // When receiving list of users, display it
@@ -347,11 +355,10 @@ socket.on ('user list', function (data) {
 socket.on ('login', function (what, msg) {
     switch (what) {
         case 'err':
-            ui_setLoginError (msg);
+            ui_setLoginError (msg);  // login failed for user 'msg'
             break;
         case 'ack':
-            userName = msg;
-            ui_toggleUserConnected ();
+            ui_setUserConnected (msg);  // msg is user name logged in
             break;
     }
 });
@@ -360,12 +367,11 @@ socket.on ('login', function (what, msg) {
 socket.on ('message list', function (from, to, isPrivate, data) {
     var ml = JSON.parse (data);
     //console.log ("Event: message list:" + data);
-    if (!isPrivate) {
-        if (to == messageArea.id) {
-            for (var i in ml) {
-                ml[i].ts = new Date (ml[i].ts);
-                dom_push_message (ml[i]);
-            }
+    if (isPrivate == messageArea.isPrivate && 
+            (to == messageArea.toId || messageArea.toId == from)) {
+        for (var i in ml) {
+            ml[i].ts = new Date (ml[i].ts);
+            dom_push_message (ml[i]);
         }
     }
 });
@@ -379,7 +385,7 @@ socket.on ('message list', function (from, to, isPrivate, data) {
 // Add subject to list
 function dom_push_subject (i, s) {
     var li = $('#sl').append($('<li>').text(s));
-    $('#sl li').last().data ('idx', i);
+    $('#sl li').last().data ('idx', i);  // add subject id into ui list as extra data
 }
 
 // Add user to list
@@ -403,6 +409,9 @@ function dom_push_message (msg) {
                         "</div>";
 
     $('#ml').append($('<li>').html(htmlCode));
+    if (msg.from == userName) {
+        $('#sl li').last().find('#txt-who').css('background-color', 'green');
+    }
 }
 
 
@@ -435,23 +444,25 @@ function ui_setEnabledPopup (enabled) {
 // When user enters invalid data on popup, show the error inside popup
 function ui_setPopupError (err) {
     if (err != null) {
-        $( '#div-err-popup' ).text (err);
-        $( '#div-err-popup' ).css('visibility', 'visible');
+        $( '.cls-err-popup' ).text (err);
+        $( '.cls-err-popup' ).css('visibility', 'visible');
     } else {
-        $( '#div-err-popup' ).css('visibility', 'hidden');
+        $( '.cls-err-popup' ).css('visibility', 'hidden');
     }
 }
 
 // Updates UI when user connects/disconnects
 // hides/shows and enables/disables some specific UI parts
-function ui_toggleUserConnected () {
-    if (userName == null) {  // disable most parts
+// sets global varialbe 'userName' to current user name or '' as none connected
+function ui_setUserConnected (user) {
+    userName = user;
+    if (userName == '') {  // disable most parts
         $( '#tbl-user').css('visibility', 'visible');
         $( '#div-current-user').css('visibility', 'hidden');
         $( '#btn-login').text("Entrar");
         $( '#btn-login').css('background-color' , '#E5FA00');
         $( '#footer').find('button, textarea').attr('disabled','disabled').addClass('ui-state-disabled');
-        $( '#btn-user').attr('disabled','disabled').addClass('ui-state-disabled');
+//        $( '#btn-user').attr('disabled','disabled').addClass('ui-state-disabled');
         $( '#btn-subject').attr('disabled','disabled').addClass('ui-state-disabled');
 
     } else { // enable everything
@@ -462,7 +473,7 @@ function ui_toggleUserConnected () {
         $( '#txt-user').text(userName);
         $( '#footer').find('button, textarea').attr('disabled',false).removeClass('ui-state-disabled');
         $( '#btn-subject').attr('disabled',false).removeClass('ui-state-disabled');
-        $( '#btn-user').attr('disabled','disabled').addClass('ui-state-disabled');
+//        $( '#btn-user').attr('disabled','disabled').addClass('ui-state-disabled');
     }
 }
 
@@ -472,7 +483,8 @@ function ui_toggleUserConnected () {
 // utility
 //
 function checkLength( o, n, min, max ) {
-    if ( o.val().length > max || o.val().length < min ) {
+    val = o.val().trim();
+    if (val.length > max || val.length < min ) {
         //o.addClass( "ui-state-error" );
         return "La longitud de " + n + " debe estar entre " + min + " y " + max + ".";
     } else {
@@ -501,12 +513,37 @@ function do_addSubject () {
     }
 }
 
+// User wants to add a new user, if valid, send it to server
+function do_addUser () {
+    var newuser = $( "#txt-newuser" );
+    var pass1 = $( "#txt-pass1" );
+    var pass2 = $( "#txt-pass2" );
+    var err = checkLength(newuser , "usuario", 3, 12 );
+    if (err == null) err = checkLength( pass1 , "contraseña", 3, 12 );
+    if (err == null) {
+        if (pass1.val() != pass2.val()) err = "Las contraseñas no coinciden";
+    }
+    if (err == null) {
+        var regexp = /^[a-z\d_]{3,12}$/i; // contains a-z, 0-9, underscores.
+        if (!regexp.test (newuser.val().trim())) err = "Caracteres inválidos en nombre de usuario";
+    }
+
+    if (err == null) {
+        ui_setEnabledPopup (false);    // don't allow duplicates from ui
+        socket.emit ('new user', newuser.val(), pass1.val());
+        return true; // valid
+    } else {
+        ui_setPopupError (err);
+        return false; //invalid
+    }
+}
+
 // User press "send" button to post a message
 function do_sendMessage () {
     var msgStr = $('#msg').val().trim(); 
     if (msgStr != '') {
-        var usr = (userName==null) ? '' : userName
-        var msg = new Message (msgStr, usr, messageArea.id, messageArea.isPrivate, '');
+        var msg = new Message (msgStr, userName, messageArea.toId, 
+                messageArea.isPrivate, '');
         socket.emit('message', JSON.stringify(msg));
     }
     $('#msg').val('');
@@ -529,15 +566,15 @@ function do_login () {
 
 // TODO: Logout would probably need to reach server to end session
 function do_logout () {
-    userName = null;
-    ui_toggleUserConnected();
+    ui_setUserConnected ('');  // No user connected
 }
 
-function do_askMessageList () {
-    var usr = (userName==null) ? '' : userName;
+function do_askMessageList (toId, toStr, isPrivate) {
+    messageArea = new MessageArea (toId, toStr, isPrivate);
     $('#ml').html('');
-    socket.emit ('get message list', usr, messageArea.id, 
-            messageArea.isPrivate);
+    if (isPrivate) toStr += ' (mensajes privados)';
+    $('#ml-title').html(toStr);
+    socket.emit ('get message list', userName, toId, isPrivate);
 }
 
 //-------------------------------------------------------------------------------
@@ -567,10 +604,27 @@ $(function() {
         }   
     });
 
+    // Create simple popup to add new user 
+    dlg_new_user = $( "#dialog-new-user" ).dialog({
+        autoOpen: false,
+        height: 300,
+        width: 380,
+        modal: true,
+        buttons: {
+            "Crear": do_addUser,
+            "Cancelar": function() {
+                dlg_new_user.dialog( "close" );
+            }
+        },
+        close: function() {
+            $('#frm-user').trigger("reset");    
+        }   
+    });
+
     // On user login, send credentials to server
     $('#frm-login').submit(function(event){
         event.preventDefault();      // Do not send GET
-        if (userName == null) do_login ();
+        if (userName == '') do_login ();
         else do_logout ();
         return false;
     });
@@ -583,25 +637,40 @@ $(function() {
         return false;
     });
 
+    // Open popup to create new subject
     $( "#btn-subject" ).button().on( "click", function() {
+        ui_setPopupError (null);
         dlg_new_subject.dialog( "open" );
     });
 
+    // Popup is submitted, so add subject
     $('#frm-subject').submit(function(event){
         event.preventDefault();      // Do not send GET
         do_addSubject();
         return false;
     });
 
+    // Open popup to create new subject
+    $( "#btn-user" ).button().on( "click", function() {
+        ui_setPopupError (null);
+        dlg_new_user.dialog( "open" );
+    });
+
+    // Popup is submitted, so add subject
+    $('#frm-user').submit(function(event){
+        event.preventDefault();      // Do not send GET
+        do_addUser();
+        return false;
+    });
+
     // Subject list effects
+    // on click, ask for message list
     $("#sl").on("click", "li", function() {
-        var sindex = $(this).index();
         var sid = $(this).data('idx');
         if (messageArea != null) {
-            if (!messageArea.isPrivate && messageArea.id == sid) return;
+            if (!messageArea.isPrivate && messageArea.toId == sid) return; // same
         }
-        messageArea = new MessageArea (sid, $(this).text(), false);
-        do_askMessageList ();
+        do_askMessageList (sid, $(this).text(), false);
     });
 
     $("#sl").on("mouseenter", "li", function() {
@@ -614,19 +683,23 @@ $(function() {
     });
 
     // User list effects
+    // on click ask for message list
     $("#ul").on("click", "li", function() {
-        if (userName == null) return;
-        var uindex = $(this).index();
-        console.log("Click on user index: " + uindex);
+        if (userName == '') return;
+        var toId = $(this).text();
+        if (messageArea != null) {
+            if (messageArea.isPrivate && messageArea.toId == toId) return; // same
+        }
+        do_askMessageList (toId, toId, true);
     });
 
     $("#ul").on("mouseenter", "li", function() {
-        if (userName ==null) return;
+        if (userName == '') return;
         $(this).addClass('cls-li-mouseover');
     });
 
     $("#ul").on("mouseleave", "li", function() {
-        if (userName == null) return;
+        if (userName == '') return;
         $(this).removeClass('cls-li-mouseover');
     });
 
@@ -636,7 +709,7 @@ $(function() {
     });
 
     // update UI to reflect wheter user is initially connected
-    ui_toggleUserConnected (); 
+    ui_setUserConnected (userName); 
 
     // Ask for dynamic data
     // we need dom to be ready and all dom listerners installed
@@ -656,7 +729,7 @@ $(function() {
 
         <div id='header'>
             <span class='cls-title'>Tremendo Foro de Mensajes!!</span>
-            <div id='header-left'>
+            <div id='header-right'>
 
                 <form id="frm-login" action=""> 
                 <table border="0" id='tbl-user'>
@@ -715,7 +788,7 @@ $(function() {
 
         <div id='center'>
             <div class='cls-column-header'>
-                <span class='cls-column-title'>Mensajes</span>
+                <span id='ml-title' class='cls-column-title'>Mensajes</span>
             </div>
             <div class='cls-column-content'>
                 <ul id='ml'>
@@ -751,6 +824,7 @@ $(function() {
     </div>    
 
 
+    <!-- new subject popup -->
     <div class="cls-popup" id="dialog-new-subject" title="Crear un tema nuevo">
 
         <form name="frm-subject" id="frm-subject" action="">
@@ -762,7 +836,26 @@ $(function() {
                 <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
             </fieldset>
         </form>
-        <div id='div-err-popup'>Error</div>
+        <div class='cls-err-popup' id='div-err-popup'>Error</div>
+    </div>
+
+    <!-- new user popup -->
+    <div class="cls-popup" id="dialog-new-user" title="Crear un usuario nuevo">
+
+        <form id="frm-user" action="">
+            <fieldset>
+                <label for="txt-newuser">Usuario:</label>
+                <input type="text" name="txt-newuser" id="txt-newuser" value="" class="text ui-widget-content ui-corner-all">
+                <label for="txt-pass1">Contraseña:</label>
+                <input type="password" name="txt-pass1" id="txt-pass1" value="" class="text ui-widget-content ui-corner-all">
+                <label for="txt-pass2">Repita contraseña:</label>
+                <input type="password" name="txt-pass2" id="txt-pass2" value="" class="text ui-widget-content ui-corner-all">
+
+                <!-- Allow form submission with keyboard without duplicating the dialog button -->
+                <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+            </fieldset>
+        </form>
+        <div class='cls-err-popup' id='div-err-popup'>Error</div>
     </div>
 
 </body>
